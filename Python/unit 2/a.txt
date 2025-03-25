@@ -1,0 +1,5 @@
+BCA 4 5
+MCA 5 5
+PGDCA 2 2
+BA 3 4
+BCOM 2 5 
