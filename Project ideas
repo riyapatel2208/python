@@ -1,0 +1,94 @@
+DELIMITER //
+
+CREATE PROCEDURE sp_UserFullNameWithRole()
+BEGIN
+    DECLARE done INT DEFAULT 0;
+    DECLARE full_name VARCHAR(100);
+    DECLARE role_name VARCHAR(50);
+
+    DECLARE cur_users CURSOR FOR
+        SELECT 
+            CONCAT(u.first_name, ' ', u.last_name),
+            r.role_name
+        FROM tblUsers u
+        JOIN tblRoles r ON u.FK_role_id = r.PK_role_id;
+
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+
+    -- Temporary table
+    CREATE TEMPORARY TABLE temp_result (
+        User_Role VARCHAR(150)
+    );
+
+    OPEN cur_users;
+
+    read_loop: LOOP
+        FETCH cur_users INTO full_name, role_name;
+
+        IF done = 1 THEN
+            LEAVE read_loop;
+        END IF;
+
+        INSERT INTO temp_result
+        VALUES (CONCAT(full_name, ' is ', role_name));
+    END LOOP;
+
+    CLOSE cur_users;
+
+    -- Single output screen
+    SELECT * FROM temp_result;
+
+    DROP TEMPORARY TABLE temp_result;
+END //
+
+DELIMITER ;
+
+
+
+//////
+
+DELIMITER //
+
+CREATE PROCEDURE sp_UserFullNameWithRole()
+BEGIN
+    DECLARE done INT DEFAULT 0;
+    DECLARE full_name VARCHAR(100);
+    DECLARE role_name VARCHAR(50);
+
+    -- Cursor
+    DECLARE cur_users CURSOR FOR
+        SELECT 
+            CONCAT(u.first_name, ' ', u.last_name),
+            r.role_name
+        FROM tblUsers u
+        JOIN tblRoles r ON u.FK_role_id = r.PK_role_id;
+
+    -- Handler
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+
+    -- Temp table to collect rows
+    CREATE TEMPORARY TABLE IF NOT EXISTS temp_user_roles (
+        User_Role VARCHAR(150)
+    );
+
+    OPEN cur_users;
+
+    read_loop: LOOP
+        FETCH cur_users INTO full_name, role_name;
+
+        IF done = 1 THEN
+            LEAVE read_loop;
+        END IF;
+
+        INSERT INTO temp_user_roles
+        VALUES (CONCAT(full_name, ' is ', role_name));
+    END LOOP;
+
+    CLOSE cur_users;
+    SELECT * FROM temp_user_roles;
+
+    DROP TEMPORARY TABLE temp_user_roles;
+END //
+
+DELIMITER ;
+
