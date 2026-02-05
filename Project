@@ -1,0 +1,160 @@
+<script>
+    // for autocomplete text
+    $(function () {
+        var availableTags = [
+            "Afghanistan", "Albania", "Australia", "Bangladesh", "Bhutan", "Brazil", "Canada",
+            "Denmark", "Egypt", "France", "Germany", "India", "Indonesia", "Kenya", "Malaysia",
+            "Nepal", "Russia", "Spain", "Thailand", "Vietnam", "United Kingdom", "United States of America"
+        ];
+        $("#country").autocomplete({ source: availableTags });
+    });
+
+    // for slider
+    $('.slider').slick({
+        infinite: false,
+        dots: false,
+        slidesToShow: 1,
+        slidesToScroll: 1,
+        nextArrow: '<i class="fa-solid fa-angle-right"></i>',
+        prevArrow: '<i class="fa-solid fa-angle-left"></i>'
+    });
+
+    // for bars in mobile
+    $(document).ready(function () {
+        $(".bars").click(function () {
+            $(".mobile-bottom").slideToggle(1000);
+        });
+    });
+
+    // state object
+    const state = {
+        cause: false,
+        country: false,
+        activity: false,
+        date: false,
+        duration: false,
+        age: false
+    };
+
+    // update badge count
+    function update() {
+        const total = Object.values(state).filter(Boolean).length;
+
+        document.querySelectorAll('.badge-count').forEach(el => {
+            if (total === 0) {
+                el.style.display = "none";
+            } else {
+                el.style.display = "inline-flex";
+                el.textContent = total;
+            }
+        });
+    }
+
+    // count checkbox
+    const causeCheckboxes = ['volunteer', 'teach', 'intern'];
+
+    causeCheckboxes.forEach(id => {
+        document.getElementById(id).addEventListener('change', () => {
+            state.cause = causeCheckboxes.some(cid =>
+                document.getElementById(cid).checked
+            );
+            update();
+        });
+    });
+
+    // count country
+    const countryInput = document.getElementById('country');
+    countryInput.addEventListener('input', e => {
+        state.country = e.target.value.trim() !== "";
+        update();
+    });
+
+    // count activity dropdown
+    const activitySelect = document.getElementById('Animal');
+    activitySelect.addEventListener('change', e => {
+        state.activity = e.target.value !== "";
+        update();
+    });
+
+    // date filter
+    document.querySelectorAll('.dropdown-menu .dropdown-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const btn = item.closest('.dropdown').querySelector('button');
+            btn.textContent = item.textContent.trim();
+
+            const allFilled = [...document.querySelectorAll('.date-btn')]
+                .every(b => b.textContent !== b.dataset.default);
+
+            state.date = allFilled;
+            update();
+        });
+    });
+
+    // duration filter
+    const slider = document.getElementById('range');
+    const rangeText = document.getElementById('rangeText');
+
+    noUiSlider.create(slider, {
+        start: [2, 8],
+        connect: true,
+        range: { min: 1, max: 10 }
+    });
+
+    slider.noUiSlider.on('update', v => {
+        rangeText.textContent =
+            Math.round(v[0]) + " week - " + Math.round(v[1]) + " weeks";
+    });
+
+    slider.noUiSlider.on('change', () => {
+        state.duration = true;
+        update();
+    });
+
+    // age filter
+    document.querySelectorAll('.age-btn + .dropdown-menu a').forEach(item => {
+        item.addEventListener('click', () => {
+            const btn = document.querySelector('.age-btn');
+            btn.textContent = item.textContent.trim();
+            state.age = btn.textContent !== "--";
+            update();
+        });
+    });
+
+    // open close more filter
+    $(document).ready(function () {
+        $(".click").click(function (e) {
+            e.preventDefault();
+            $(".filter-backdrop").fadeToggle(1500);
+            $(".slide-wrapper").slideToggle(1500);
+            $("body").toggleClass("overflow-hidden");
+        });
+
+        $(".close-btn, .filter-backdrop").click(function () {
+            $(".filter-backdrop").fadeOut(1500);
+            $(".slide-wrapper").slideUp(1500);
+            $("body").removeClass("overflow-hidden");
+        });
+    });
+
+    // reset start date
+    function resetDate() {
+        document.querySelectorAll('.date-btn').forEach(btn => {
+            btn.textContent = btn.dataset.default;
+        });
+        state.date = false;
+        update();
+    }
+
+    // reset duration
+    function resetDuration() {
+        if (slider && slider.noUiSlider) {
+            slider.noUiSlider.set([2, 8]);
+            rangeText.textContent = "2 week - 8 weeks";
+        }
+        state.duration = false;
+        update();
+    }
+
+    // initial hide badge
+    update();
+</script>
