@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-# ---------------- BANK (STATIC) ----------------
+# ---------------- BANK ----------------
 class Bank:
     banks = {
         "SBI": "SBIN0001111",
@@ -39,18 +39,22 @@ class Account(ABC):
 
     def deposit(self, amount):
         if amount <= 0:
+            print("Invalid deposit amount")
             return False
         self.balance += amount
         return True
 
     def withdraw(self, amount):
-        if amount > self.balance or amount <= 0:
+        if amount <= 0 or amount > self.balance:
             return False
         self.balance -= amount
         return True
 
     def transfer(self, amount, target_account, ifsc=None):
         if amount <= 0 or amount > self.balance:
+            print("Invalid transfer amount")
+            return False
+        if not self.can_withdraw(amount):
             return False
         self.balance -= amount
         target_account.balance += amount
@@ -60,18 +64,33 @@ class Account(ABC):
     def account_type(self):
         pass
 
+    @abstractmethod
+    def can_withdraw(self, amount):
+        pass
+
 
 # ---------------- SAVING ACCOUNT ----------------
 class SavingAccount(Account):
     MIN_BALANCE = 10000
-    MAX_OPENING = 49000
+    MAX_BALANCE = 49000
 
     def account_type(self):
         return "Saving"
 
-    def withdraw(self, amount):
+    def deposit(self, amount):
+        if self.balance + amount > self.MAX_BALANCE:
+            print("Saving account balance cannot exceed 49000")
+            return False
+        return super().deposit(amount)
+
+    def can_withdraw(self, amount):
         if self.balance - amount < self.MIN_BALANCE:
-            print("Minimum balance 10000 must be maintained")
+            print("Saving account must maintain minimum balance of 10000")
+            return False
+        return True
+
+    def withdraw(self, amount):
+        if not self.can_withdraw(amount):
             return False
         return super().withdraw(amount)
 
@@ -83,9 +102,14 @@ class CurrentAccount(Account):
     def account_type(self):
         return "Current"
 
-    def withdraw(self, amount):
+    def can_withdraw(self, amount):
         if self.balance - amount < self.MIN_BALANCE:
-            print("Minimum balance 500 must be maintained")
+            print("Current account must maintain minimum balance of 500")
+            return False
+        return True
+
+    def withdraw(self, amount):
+        if not self.can_withdraw(amount):
             return False
         return super().withdraw(amount)
 
@@ -100,11 +124,11 @@ class CurrentAccount(Account):
         return True
 
 
-# ---------------- DATA STORAGE ----------------
+# ---------------- STORAGE ----------------
 accounts = []
 
 
-# ---------------- HELPER FUNCTIONS ----------------
+# ---------------- HELPERS ----------------
 def find_account(bank, username, acc_no):
     for acc in accounts:
         if acc.bank_name == bank and acc.user.username == username and acc.account_no == acc_no:
@@ -132,13 +156,11 @@ while True:
 
     choice = input("Enter choice: ")
 
-    # -------- OPEN ACCOUNT --------
+    # OPEN ACCOUNT
     if choice == "1":
         show_banks()
         bank = input("Choose Bank: ")
-        if bank == "0":
-            continue
-        if bank not in Bank.banks:
+        if bank == "0" or bank not in Bank.banks:
             print("Invalid Bank")
             continue
 
@@ -150,18 +172,17 @@ while True:
         username = input("Username: ")
 
         balance = float(input("Opening Deposit: "))
-
         user = User(username, fname, lname, email)
 
         if acc_type == "saving":
             if balance < 10000 or balance > 49000:
-                print("Saving account requires opening balance between 10000 and 49000")
+                print("Saving account opening balance must be between 10000 and 49000")
                 continue
             acc = SavingAccount(user, bank, balance)
 
         elif acc_type == "current":
             if balance < 500:
-                print("Current account requires minimum opening balance of 500")
+                print("Current account opening balance must be at least 500")
                 continue
             acc = CurrentAccount(user, bank, balance)
 
@@ -170,14 +191,11 @@ while True:
             continue
 
         accounts.append(acc)
-
         print("Account Created Successfully")
-        print("Bank:", bank)
-        print("Account Type:", acc.account_type())
         print("Account Number:", acc.account_no)
         print("Balance:", acc.balance)
 
-    # -------- CHECK ALL ACCOUNTS --------
+    # CHECK ALL
     elif choice == "2":
         if not accounts:
             print("No accounts available")
@@ -191,106 +209,82 @@ while True:
                 f"Balance: {acc.balance}"
             )
 
-    # -------- WITHDRAW --------
+    # WITHDRAW
     elif choice == "3":
-        for _ in range(3):
-            bank = input("Bank Name: ")
-            username = input("Username: ")
-            acc_no = int(input("Account No: "))
-            acc = find_account(bank, username, acc_no)
+        bank = input("Bank: ")
+        username = input("Username: ")
+        acc_no = int(input("Account No: "))
+        acc = find_account(bank, username, acc_no)
 
-            if acc:
-                amount = float(input("Withdraw Amount: "))
-                if acc.withdraw(amount):
-                    print("Withdrawal Successful")
-                    print("Remaining Balance:", acc.balance)
-                else:
-                    print("Withdrawal Failed")
-                break
+        if acc:
+            amount = float(input("Withdraw Amount: "))
+            if acc.withdraw(amount):
+                print("Withdrawal Successful")
+                print("Remaining Balance:", acc.balance)
             else:
-                print("Invalid details, try again")
+                print("Withdrawal Failed")
         else:
-            print("Too many failed attempts")
+            print("Invalid account details")
 
-    # -------- DEPOSIT --------
+    # DEPOSIT
     elif choice == "4":
-        for _ in range(3):
-            bank = input("Bank Name: ")
-            username = input("Username: ")
-            acc_no = int(input("Account No: "))
-            acc = find_account(bank, username, acc_no)
+        bank = input("Bank: ")
+        username = input("Username: ")
+        acc_no = int(input("Account No: "))
+        acc = find_account(bank, username, acc_no)
 
-            if acc:
-                amount = float(input("Deposit Amount: "))
-                if acc.deposit(amount) and not isinstance(acc, CurrentAccount):
-                    print("Deposit Successful")
-                    print("Updated Balance:", acc.balance)
-                break
-            else:
-                print("Invalid details, try again")
+        if acc:
+            amount = float(input("Deposit Amount: "))
+            if acc.deposit(amount) and not isinstance(acc, CurrentAccount):
+                print("Deposit Successful")
+                print("Updated Balance:", acc.balance)
         else:
-            print("Too many failed attempts")
+            print("Invalid account details")
 
-    # -------- TRANSFER --------
+    # TRANSFER
     elif choice == "5":
-        if len(accounts) < 2:
-            print("At least two accounts required for transfer")
+        bank1 = input("Sender Bank: ")
+        user1 = input("Sender Username: ")
+        acc1_no = int(input("Sender Account No: "))
+        sender = find_account(bank1, user1, acc1_no)
+
+        bank2 = input("Receiver Bank: ")
+        user2 = input("Receiver Username: ")
+        acc2_no = int(input("Receiver Account No: "))
+        receiver = find_account(bank2, user2, acc2_no)
+
+        if not sender or not receiver:
+            print("Invalid sender or receiver details")
             continue
 
-        for _ in range(3):
-            bank1 = input("Sender Bank: ")
-            user1 = input("Sender Username: ")
-            acc1_no = int(input("Sender Account No: "))
-            sender = find_account(bank1, user1, acc1_no)
+        amt = float(input("Transfer Amount: "))
 
-            if not sender:
-                print("Invalid sender details")
+        if bank1 != bank2:
+            ifsc = input("Enter IFSC: ")
+            if ifsc != Bank.banks.get(bank2):
+                print("Invalid IFSC")
                 continue
 
-            bank2 = input("Receiver Bank: ")
-            user2 = input("Receiver Username: ")
-            acc2_no = int(input("Receiver Account No: "))
-            receiver = find_account(bank2, user2, acc2_no)
-
-            if not receiver:
-                print("Invalid receiver details")
-                continue
-
-            amt = float(input("Transfer Amount: "))
-
-            if bank1 != bank2:
-                ifsc = input("Enter IFSC Code: ")
-                if ifsc != Bank.banks.get(bank2):
-                    print("Invalid IFSC")
-                    continue
-
-            if sender.transfer(amt, receiver):
-                print("Transfer Successful")
-                print("Sender Balance:", sender.balance)
-                print("Receiver Balance:", receiver.balance)
-                break
-            else:
-                print("Transfer Failed")
+        if sender.transfer(amt, receiver):
+            print("Transfer Successful")
+            print("Sender Balance:", sender.balance)
+            print("Receiver Balance:", receiver.balance)
         else:
-            print("Transfer failed after 3 attempts")
+            print("Transfer Failed")
 
-    # -------- CHECK BALANCE --------
+    # CHECK BALANCE
     elif choice == "6":
-        for _ in range(3):
-            bank = input("Bank Name: ")
-            username = input("Username: ")
-            acc_no = int(input("Account No: "))
-            acc = find_account(bank, username, acc_no)
+        bank = input("Bank: ")
+        username = input("Username: ")
+        acc_no = int(input("Account No: "))
+        acc = find_account(bank, username, acc_no)
 
-            if acc:
-                print("Account Balance:", acc.balance)
-                break
-            else:
-                print("Invalid details, try again")
+        if acc:
+            print("Account Balance:", acc.balance)
         else:
-            print("Too many failed attempts")
+            print("Invalid account details")
 
-    # -------- EXIT --------
+    # EXIT
     elif choice == "7":
         print("Thank you for using Banking System")
         break
